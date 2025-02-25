@@ -39,7 +39,7 @@ def renew(qr_string, quiet, timestamp):
     if not quiet:
         click.echo(f'New timestamp of QR creation is: {qr_code_data.timestamp_created} '
                    f'({datetime.datetime.fromtimestamp(qr_code_data.timestamp_created).isoformat()})')
-    click.echo(qr_code_data.encode())
+    click.echo(qr_code_data.encode('utf-8'))
 
 
 if __name__ == '__main__':

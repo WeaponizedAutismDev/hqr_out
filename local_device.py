@@ -43,13 +43,13 @@ class LocalDevice:
         username_padded = self._username.ljust(16, '\x00')
         password_padded = self._password.ljust(16, '\x00')
         return '&'.join([
-            base64.b64encode(self._name.encode('utf-8')).decode(),
+            base64.b64encode(self._name.encode('utf-8')).decode('utf-8'),
             '0',  # Always 0 in my cases (maybe device type)
-            base64.b64encode(self._ip_address.encode('utf-8')).decode(),
+            base64.b64encode(self._ip_address.encode('utf-8')).decode('utf-8'),
             str(self._port),
             '',  # Always empty in my cases
-            HikAES().encrypt_str_to_b64(username_padded),
-            HikAES().encrypt_str_to_b64(password_padded),
+            HikAES().encrypt_str_to_b64(username_padded,'utf-8'),
+            HikAES().encrypt_str_to_b64(password_padded,'utf-8'),
         ])
 
     @property

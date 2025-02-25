@@ -10,12 +10,12 @@ from local_device import LocalDevice
 class QrCodeData:
     _e2e_password: str
     _timestamp_created: int
-    _local_devices: [LocalDevice]
+    _local_devices: list[LocalDevice]
 
     def __init__(
             self,
             e2e_password: str,
-            local_devices: [LocalDevice],
+            local_devices: list[LocalDevice],
             header: str = 'QRC03010003',
             timestamp_created: int = int(datetime.datetime.now().timestamp())
     ):
@@ -32,11 +32,14 @@ class QrCodeData:
         compressed_data_b64 = qr_string[11:]
 
         decompressed_data = zlib.decompress(base64.b64decode(compressed_data_b64)).decode()
-
-        e2e_password_enc_b64, local_devices_str, timestamp_created_enc = decompressed_data.split(':')
-        e2e_password = HikAES().decrypt_b64_to_str(e2e_password_enc_b64).rstrip('\x00')
-        timestamp_created = int(HikAES().decrypt_b64_to_str(timestamp_created_enc).rstrip('\x00'))
-
+        if decompressed_data.split(':').count == 3:
+            e2e_password_enc_b64, local_devices_str, timestamp_created_enc = decompressed_data.split(':')
+            e2e_password = HikAES().decrypt_b64_to_str(e2e_password_enc_b64).rstrip('\x00')
+            timestamp_created = int(HikAES().decrypt_b64_to_str(timestamp_created_enc).rstrip('\x00'))
+        else:
+            e2e_password_enc_b64, local_devices_str = decompressed_data.split(':')
+            e2e_password = HikAES().decrypt_b64_to_str(e2e_password_enc_b64).rstrip('\x00')
+            timestamp_created = int(datetime.datetime.now().timestamp())
         local_devices = []
         for local_device_encoded in local_devices_str.split('$'):
             if not len(local_device_encoded):
@@ -62,8 +65,8 @@ class QrCodeData:
                 HikAES().encrypt_str_to_b64(self._e2e_password.ljust(16, '\x00')),
                 local_devices_str,
                 HikAES().encrypt_str_to_b64(str(self._timestamp_created).ljust(16, '\x00')),
-            ]).encode()
-        )).decode()
+            ]).encode('utf-8')
+        )).decode('utf-8')
         return f'{self._header}{compressed_data_b64}'
 
     @property
@@ -71,7 +74,7 @@ class QrCodeData:
         return self._e2e_password
 
     @property
-    def local_devices(self) -> [LocalDevice]:
+    def local_devices(self) -> list[LocalDevice]:
         return self._local_devices
 
     @property
