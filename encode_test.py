@@ -10,7 +10,7 @@ def encodeb64(input_str: str) -> str:
 
 str1 = encodeb64("subdomain.domain.tld")
 
-str2 = encode("secretpassword")
+str2 = encode("@blackhackingcam")
 
 print(str1)
 print(str2)
