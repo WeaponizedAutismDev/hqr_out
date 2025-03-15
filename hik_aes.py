@@ -9,7 +9,7 @@ class HikAES(pyaes.AES):
             24: rounds,
             32: rounds,
             44: rounds,
-        }  # 44 is not a valid key size, but it is used for padding by the looks found a few instances of ADT usernames 44 bytes long i tink the important thing here is the div/4 of the key size
+        }  # 44 is not a standard key size, but it is used for padding by the looks found a few instances of ADT usernames 44 bytes long i tink the important thing here is the div/4 of the key size
         super().__init__(key)
 
     def decrypt_b64_to_str(self, ciphertext: str) -> str:

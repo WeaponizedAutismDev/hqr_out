@@ -1,66 +1,83 @@
-# HikVision QR export decoder
+# HikVision QR Export Utilities
 
-![](./assets/hik_connect_qr_320.png)
+A collection of tools for working with Hikvision QR codes, including encoding, decoding, and batch processing capabilities.
 
-## Usage
-```bash
-$ git clone git@github.com:maxim-smirnov/hik-qr-export.git
-$ cd hik-qr-export
-$ python3 -m venv venv  # Create new virtual environment
-$ source venv/bin/activate  # Activate venv
-$ pip install -r requirements.txt  # Install requirements 
-$ python hik_qr_export.py --help
-Usage: hik_qr_export.py [OPTIONS] COMMAND [ARGS]...
+## Quick Start
 
-Options:
-  --help  Show this message and exit.
+```python
+from encode_test import encode, encodeb64
 
-Commands:
-  decode  Decode QR code data, extract metadata and stored devices.
-  renew   Renew QR code.
+# For domain names (Base64)
+domain = encodeb64("subdomain.domain.tld")
+
+# For passwords (AES encrypted)
+password = encode("secretpassword")
 ```
 
-# What and why?
+## Installation
 
-## Intro
+```bash
+$ git clone git@github.com:weaponizedautismdev/hk.git
+$ cd hik-qr-export
+$ python3 -m venv venv
+$ source venv/bin/activate
+$ python -m pip install -r requirements.txt
+```
 
-I forgot password from my HikVision camera. But this camera was added to
-application called **Hik-Connect** and I still had access to my camera with
-this app. But the password for device is hidden in the app.
+## Requirements
 
-So I began looking for a way to extract the password for my camera.
+- Python 3.8+
+- OpenCV (`cv2`) for QR image processing
+- `qreader` for enhanced QR detection
+- `pyaes` for AES encryption
+- `click` for CLI interface
+- `sqlite3` for device storage
 
-There is an option in **Hik-Connect** application to export local devices.
-The app will ask you to set end-to-end encryption password 
-to protect your exported devices. Well, there is an encryption used, 
-but with a static key hardcoded into application. 
+## Developer Setup
 
-So it's possible to decode and decrypt exported data without export password you set.
+### Environment Setup
+```bash
+python -m venv venv
+source venv/bin/activate  # or `venv\Scripts\activate` on Windows
+pip install -r requirements.txt
+```
 
-And if you forgot your export password it's also possible to restore it!
+### Running Tests
+```bash
+python -m pytest tests/
+```
 
-(Your password is not even hashed, it's also encrypted with static key)
+### Common Issues
+- QR detection may fail on low-resolution images
+- Some non-UTF8 device names may cause decoding issues
+- AES decryption fails if username length > 16 chars
 
-## Adding local device to application
-Just press **+** in top right corner and select **"Add Device Manually"**.
+## Features
 
-![](./assets/add_new_device.gif)
+- Encode/decode Hikvision QR codes
+- Process directories of QR code images
+- Store device information in SQLite database
+- Export data to CSV
+- Handle multiple QR code format variations
+- Support for legacy and modern QR formats
 
-## Exporting local devices
-Switch to **Me** tab and scroll down till **"Export Local Devices""** option.
-Select devices you want to export and then **"Generate QR Code"** at the bottom.
+## Command Line Usage
 
-You will be asked to enter the password for your QR code. 
-This password will be asked on the other phone when you will scan 
-this QR with **Hik-Connect** app.
+```bash
+# Decode a single QR code
+python hik_qr_export.py decode <qr_data>
 
-Also, QR code has an expiration period.
+# Process a directory of QR images
+python hik_qr_export.py process-directory /path/to/images --output-dir ./processed --database devices.db
+```
 
-![](./assets/qr_export.gif)
+## Technical Details
 
-We will talk about password and exp. period a little later.
+### Original Research and Implementation
+<details>
+<summary>View original research by maxim-smirnov</summary>
 
-## QR Code Structure
+### QR Code Structure
 Let's scan QR code I created for dummy camera and see what's inside.
 `QRC03010003eJwrKnNNzC0vNy/yLogwD041LTUocg13tLW1ijRyK4mK8MpQM1DzDcmu9MlyNfJ3NqkA0rZqFgYGBmpqySWGuSYp5iEVwc5eHkZJHpnhWcFBQK04JVSsjJO8g5IC0gMSU6KcqsxczEuzjfQNA21tAQ4rKR0=`
 
@@ -123,7 +140,7 @@ We can clearly see some structure here. Let's try to decode it:
     <tr><td><code>3bKRbPgPadZBz6D7uk2/1Q==</code></td><td><code>\xdd\xb2\x91l\xf8\x0fi\xd6A\xcf\xa0\xfb\xbaM\xbf\xd5</code></td></tr>
 </table>
 
-## Camera inside QR
+### Camera inside QR
 
 We can already see the name of the camera: `camera`, IP address I put: `192.168.1.1`,
 port: `8000` and also two identical data block one by one. Did you remember I put `admin`
@@ -144,14 +161,14 @@ also we know that our export password does not affect those encryption.
 
 After that I started digging into the app itself.
 
-## Application findings
+### Application findings
 Because I have created a lot of QR codes for cameras with different lengths of 
 `username` and `password` I noticed that bytes count in decoded data always the same: `16`.
 
 Looks like we're looking for block cipher! And what's most popular block cipher do we know?
 **AES!**
 
-## Final steps
+### Final steps
 
 Android application is loading native library with function we're looking for.
 
@@ -178,3 +195,103 @@ Port: 8000
 Username: admin
 Password: admin
 ```
+
+</details>
+
+## Implementation Details
+
+### QR Processing Tools
+
+#### Directory Processor (`qr_directory_processor.py`)
+- Uses Qreader & CV2 for improved QR detection
+- Handles poor quality and damaged QRs
+- Processes multiple image formats (jpg, png, gif)
+- Automated file renaming with extracted passwords
+- Database storage of device details
+
+#### Database Schema
+```sql
+    CREATE TABLE IF NOT EXISTS devices (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        ip_address TEXT NOT NULL,
+        port INTEGER NOT NULL,
+        username TEXT NOT NULL,
+        password TEXT NOT NULL,
+        qr_file TEXT NOT NULL,
+        qr_password TEXT NOT NULL,
+        footer TEXT NOT NULL
+    );
+```
+
+### Variation Handling
+
+#### QR Format Variations
+```python
+def handle_variations(decompressed_data: str) -> str:
+    # Standardize delimeters
+    return decompressed_data.replace(";", "$").replace(",", "&")
+```
+
+#### Optional Fields
+```python
+# Handle missing timestamps
+if len(parts) < 3:
+    footer = str(datetime.datetime.now().timestamp())
+
+# Handle missing E2E password
+if len(parts) == 1:
+    e2e_password = "NoPassWD"
+```
+
+### CLI Reference
+
+```bash
+# Basic Usage
+python hik_qr_export.py <command> [options]
+
+# Commands
+decode              # Decode single QR code
+process-directory   # Batch process directory of QRs
+export-csv         # Export database to CSV
+search             # Search device database
+
+# Options
+--output-dir PATH      # Output directory for processed files
+--database PATH        # SQLite database path
+--quiet               # Suppress detailed output
+--delete-originals    # Remove original files after processing
+--extensions LIST     # File types to process (default: jpg,png,gif)
+--rename-pattern STR  # Custom filename pattern for processed files
+```
+
+### Utility Scripts
+
+#### Database Query Tool (`db_query.py`)
+```bash
+# List all devices
+python db_query.py list-devices devices.db
+
+# Search by IP or device name
+python db_query.py search devices.db "192.168.1"
+
+# Export filtered results
+python db_query.py export-csv devices.db output.csv --filter "port=8000"
+```
+
+#### Batch Renaming Tool (`rename_processed.py`)
+```bash
+# Rename processed files with password
+python rename_processed.py --dir ./processed --pattern "{date}_{password}_{name}"
+
+# Dry run to preview changes
+python rename_processed.py --dir ./processed --dry-run
+```
+
+## Contributing
+
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+
+## License
+
+[Add your license here]
