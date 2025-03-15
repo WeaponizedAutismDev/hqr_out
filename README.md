@@ -7,17 +7,24 @@ A collection of tools for working with Hikvision QR codes, including encoding, d
 ```python
 from encode_test import encode, encodeb64
 
-# For domain names (Base64)
+# For domain names & IP,  (Base64)
 domain = encodeb64("subdomain.domain.tld")
 
-# For passwords (AES encrypted)
+# For QR password, QR timestamp footer, device Username and passwords  (AES encrypted)
 password = encode("secretpassword")
+
+# Decode a single QR code
+python hik_qr_export.py decode <qr_data>
+
+# Process a directory of QR images
+python hik_qr_export.py process-directory /path/to/images --output-dir ./processed --database devices.db
+
 ```
 
 ## Installation
 
 ```bash
-$ git clone git@github.com:weaponizedautismdev/hk.git
+$ git clone git@github.com:weaponizedautismdev/hqr_out.git
 $ cd hik-qr-export
 $ python3 -m venv venv
 $ source venv/bin/activate
@@ -49,7 +56,8 @@ python -m pytest tests/
 
 ### Common Issues
 - QR detection may fail on low-resolution images
-- Some non-UTF8 device names may cause decoding issues
+- Some non-UTF8 device names may cause decoding issues 
+- Vietnamese Names did'nt like the UTF-8 in my testing use `.decode("unicode-escape")` instead
 - AES decryption fails if username length > 16 chars
 
 ## Features
@@ -226,6 +234,13 @@ Password: admin
 
 ### Variation Handling
 
+Further research shows that there are variations in delimiters for both devices and fields.
+- QR format changes based on OEM and age. 
+- Header value is not static. Unsure of significancem, I have seen variations with the last char being 1, 2 or 3.
+- QR password is optional.
+- Footer Timestamp is optional and appears mostly on newer QR codes, it appears to govern access duration. 
+  - It can be safely removed for clients that support older variations like ENS Vision, Alibi Witness 3.0, Guarding Vision.
+
 #### QR Format Variations
 ```python
 def handle_variations(decompressed_data: str) -> str:
@@ -277,15 +292,6 @@ python db_query.py search devices.db "192.168.1"
 
 # Export filtered results
 python db_query.py export-csv devices.db output.csv --filter "port=8000"
-```
-
-#### Batch Renaming Tool (`rename_processed.py`)
-```bash
-# Rename processed files with password
-python rename_processed.py --dir ./processed --pattern "{date}_{password}_{name}"
-
-# Dry run to preview changes
-python rename_processed.py --dir ./processed --dry-run
 ```
 
 ## Contributing

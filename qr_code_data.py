@@ -33,20 +33,18 @@ class QrCodeData:
         header = qr_string[:11]
         compressed_data_b64 = qr_string[11:]
 
-        decompressed_data = zlib.decompress(
-            base64.b64decode(compressed_data_b64)
-        ).decode("utf-8")
         # print(decompressed_data)
         # print(decompressed_data.split(':'))
 
-        clean_decompressed_data = decompressed_data.replace(";", "$").replace(",", "&")
-        # print(clean_decompressed_data)
+        decompressed_data = zlib.decompress(
+            base64.b64decode(compressed_data_b64)
+        ).decode("utf-8")
 
-        # print(clean_decompressed_data.split(":"))
+        clean_decompressed_data = cls.handle_variations(decompressed_data)
+
         split_count = len(clean_decompressed_data.split(":"))
-        # print(f"The string was split into {split_count} items")
+
         if len(clean_decompressed_data.split(":")) == 3:
-            # print("3")
             e2e_password_enc_b64, local_devices_str, footer_enc = (
                 clean_decompressed_data.split(":")
             )
@@ -61,7 +59,6 @@ class QrCodeData:
             except Exception as e:
                 raise DecryptError(f"Error decrypting footer: {e}")
         elif len(clean_decompressed_data.split(":")) == 2:
-            #  print("2")
             e2e_password_enc_b64, local_devices_str = clean_decompressed_data.split(":")
             try:
                 e2e_password = (
@@ -71,14 +68,12 @@ class QrCodeData:
                 raise DecryptError(f"Error decrypting e2e_password: {e}")
             footer = str(datetime.datetime.now().timestamp())
         elif len(clean_decompressed_data.split(":")) == 1:
-            #    print("1")
             local_devices_str = clean_decompressed_data
             e2e_password = "NoPassWD"
             footer = str(datetime.datetime.now().timestamp())
+
         local_devices = []
-        # print(local_devices_str.split("$"))
-        # dev_split_count = len(local_devices_str.split("$"))
-        # print(f"The string contained {dev_split_count} devices")
+
         for local_device_encoded in local_devices_str.split("$"):
             if not len(local_device_encoded):
                 #       print("continue")
@@ -90,7 +85,9 @@ class QrCodeData:
             header=header,
             footer=footer,
         )
-
+    def handle_variations(decompressed_data: str) -> str:
+        # Standardize delimeters
+        return decompressed_data.replace(";", "$").replace(",", "&")
     def renew(self):
         self._footer = str(datetime.datetime.now().timestamp())
 
