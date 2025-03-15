@@ -180,3 +180,6 @@ cython_debug/
 *.db
 *.csv
 *.txt
+*.json
+
+

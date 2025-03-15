@@ -2,7 +2,7 @@ import base64
 import datetime
 import zlib
 
-from errors import InvalidLengthError
+from errors import InvalidLengthError, DecryptError
 from hik_aes import HikAES
 from local_device import LocalDevice
 
@@ -42,37 +42,46 @@ class QrCodeData:
         clean_decompressed_data = decompressed_data.replace(";", "$").replace(",", "&")
         # print(clean_decompressed_data)
 
-        print(clean_decompressed_data.split(":"))
+        # print(clean_decompressed_data.split(":"))
         split_count = len(clean_decompressed_data.split(":"))
-        print(f"The string was split into {split_count} items")
+        # print(f"The string was split into {split_count} items")
         if len(clean_decompressed_data.split(":")) == 3:
-            print("3")
+            # print("3")
             e2e_password_enc_b64, local_devices_str, footer_enc = (
                 clean_decompressed_data.split(":")
             )
-            e2e_password = (
-                HikAES().decrypt_b64_to_str(e2e_password_enc_b64).rstrip("\x00")
-            )
-            footer = HikAES().decrypt_b64_to_str(footer_enc).rstrip("\x00")
+            try:
+                e2e_password = (
+                    HikAES().decrypt_b64_to_str(e2e_password_enc_b64).rstrip("\x00")
+                )
+            except Exception as e:
+                raise DecryptError(f"Error decrypting e2e_password: {e}")
+            try:
+                footer = HikAES().decrypt_b64_to_str(footer_enc).rstrip("\x00")
+            except Exception as e:
+                raise DecryptError(f"Error decrypting footer: {e}")
         elif len(clean_decompressed_data.split(":")) == 2:
-            print("2")
+            #  print("2")
             e2e_password_enc_b64, local_devices_str = clean_decompressed_data.split(":")
-            e2e_password = (
-                HikAES().decrypt_b64_to_str(e2e_password_enc_b64).rstrip("\x00")
-            )
+            try:
+                e2e_password = (
+                    HikAES().decrypt_b64_to_str(e2e_password_enc_b64).rstrip("\x00")
+                )
+            except Exception as e:
+                raise DecryptError(f"Error decrypting e2e_password: {e}")
             footer = str(datetime.datetime.now().timestamp())
         elif len(clean_decompressed_data.split(":")) == 1:
-            print("1")
+            #    print("1")
             local_devices_str = clean_decompressed_data
             e2e_password = "NoPassWD"
             footer = str(datetime.datetime.now().timestamp())
         local_devices = []
-        print(local_devices_str.split("$"))
-        dev_split_count = len(local_devices_str.split("$"))
-        print(f"The string contained {dev_split_count} devices")
+        # print(local_devices_str.split("$"))
+        # dev_split_count = len(local_devices_str.split("$"))
+        # print(f"The string contained {dev_split_count} devices")
         for local_device_encoded in local_devices_str.split("$"):
             if not len(local_device_encoded):
-                print("continue")
+                #       print("continue")
                 continue
             local_devices.append(LocalDevice.from_encoded(local_device_encoded))
         return cls(
