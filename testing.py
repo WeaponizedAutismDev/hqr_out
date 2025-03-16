@@ -8,7 +8,7 @@ from local_device import LocalDevice
 
 # test string manually created from a decoded QR code. This is the data that would be passed to the QrCodeData class
 
-QRdatq = "QRC03010003eJwrKnNNzC0vNy/yLogwD041LTUocg13tLW1ijRyK4mK8MpQM1DzDcmu9MlyNfJ3NqkA0rZqFgYGBmpqySWGuSYp5iEVwc5eHkZJHpnhWcFBQK04JVSsjJO8g5IC0gMSU6KcqsxczEuzjfQNA21tAQ4rKR0="
+QRdatq = "QRC03010003eJwz9MkxNMoJjfDOjgo0dQrPDS43yTEJtLW1CjWyLIkKdnKJDDfMSc51tVUzUPMNya70yXI18nc2qQDStmoWBgYGamoFxhYGlnmlfr6pziYeaVl54WFFJdnltrZq+gEFmb7Fvqna+o4BbsWGaaFF/pbljkAJFSvjJO+gpID0gMSUKKcqMxfz0mwjfUOgtQAmxisw"
 
 header = QRdatq[:11]
 compressed_data_b64 = QRdatq[11:]
@@ -43,11 +43,11 @@ if not footer_enc is None:
     footer = HikAES().decrypt_b64_to_str(footer_enc).rstrip("\x00")
 else:
     footer = "No Timestamp footer"
-print("╔════════⫸ QR Code Data ⫷═════════⦿")
+print("╔════════════⫸ QR Code Data ⫷════════════⦿")
 print("║")
-print(f"╠⦿ Data header:   {header}")
-print(f"╠⦿ QR Password:   {e2e_password}")
-print(f"╠⦿ QR TS Footer:  {footer}")
+print(f"╠⦿ Header    ➛ {header}")
+print(f"╠⦿ QR PW     ➛ {e2e_password}")
+print(f"╠⦿ Timestamp ➛ {footer}")
 print("║")
 print("╚═⫸")
 split_devices = list
@@ -86,15 +86,15 @@ for dev in split_dev:
         username = f"Decrypt Error: {username_enc_b64} len is {ul}"
     password = HikAES().decrypt_b64_to_str(password_enc_b64).rstrip("\x00")
 
-    print(f"╔═⫸ Device #{n}/{nodev - 1} ⫷═══⦿")
+    print(f"╔════════════⫸ Device #{n}/{nodev - 1} ⫷════════════⦿")
     print("║")
-    print(f"╠⦿ Device ➛   {name}")
-    print(f"╠⦿ Type ➛     {devtype}")
-    print(f"╠⦿ Host ➛     {ip_address}")
-    print(f"╠⦿ Port ➛     {port}")
-    print(f"╠⦿ Filler ➛   {filler}")
-    print(f"╠⦿ Username ➛ {username}")
-    print(f"╠⦿ Password ➛ {password}")
+    print(f"╠⦿ Device    ➛ {name}")
+    print(f"╠⦿ Type      ➛ {devtype}")
+    print(f"╠⦿ Host      ➛ {ip_address}")
+    print(f"╠⦿ Port      ➛ {port}")
+    print(f"╠⦿ Filler    ➛ {filler}")
+    print(f"╠⦿ Username  ➛ {username}")
+    print(f"╠⦿ Password  ➛ {password}")
     print("║")
     print("╚═⫸")
     if n == nodev - 1:

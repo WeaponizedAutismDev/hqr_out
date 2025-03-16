@@ -9,10 +9,10 @@ def decodeb64(input_str: str) -> str:
 
 str1 = decodeb64("MTkyLjE2OC4xLjE=")
 
-string_enc_b64 = "TBCwBOnh0rZYdc8xFOICmQ=="
+string_enc_b64 = "3bKRbPgPadZBz6D7uk2/1Q=="
 
-#TBCwBOnh0rZYdc8xFOICmQ==
-#TBCwBOnh0rZYdc8xFOICm
+# TBCwBOnh0rZYdc8xFOICmQ==
+# TBCwBOnh0rZYdc8xFOICm
 
 ul = len(string_enc_b64)  # check length of string_enc_b64
 
@@ -29,5 +29,3 @@ else:
 print("Decoded string:", string)
 print("Original string:", str1)
 print("Length of encoded string:", ul)
-
-
