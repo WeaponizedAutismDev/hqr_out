@@ -4,19 +4,17 @@ import sqlite3
 import re
 from pathlib import Path
 from typing import List, Optional
-
 import click
 from qreader import QReader
 import cv2
 from pyzbar.pyzbar import decode
 from PIL import Image
-
 from qr_code_data import QrCodeData
+from dahua_qr_code_data import dahuaQrCodeData
 from logger import setup_logger
 from datetime import datetime
 
 logger = setup_logger()
-
 
 def setup_database(db_path: str) -> sqlite3.Connection:
     """Setup SQLite database for storing device information."""
@@ -28,6 +26,7 @@ def setup_database(db_path: str) -> sqlite3.Connection:
         """
     CREATE TABLE IF NOT EXISTS devices (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        oem_vendor TEXT NOT NULL,
         name TEXT NOT NULL,
         ip_address TEXT NOT NULL,
         port INTEGER NOT NULL,
@@ -35,7 +34,33 @@ def setup_database(db_path: str) -> sqlite3.Connection:
         password TEXT NOT NULL,
         qr_file TEXT NOT NULL,
         qr_password TEXT NOT NULL,
-        footer TEXT NOT NULL
+        footer TEXT NOT NULL,
+        qr_outputfile TEXT NULL,
+        exported_qr_file TEXT NULL,
+        exported_qr_raw BLOB NULL,
+        exported_qr_encoded BLOB NULL,
+        exported_csv_file TEXT NULL,
+        exported_xml_file TEXT NULL,
+        exported_xml_raw TEXT NULL,
+        is_support_zero INTEGER  NULL,
+        playback_Type INTEGER NULL,
+        channel_Count INTEGER NULL,
+        module_type INTEGER  NULL,
+        preview_type INTEGER NULL,
+        device_type INTEGER NULL,
+        processed_time TEXT NOT NULL,
+        updated_time TEXT NOT NULL,
+        exported_time TEXT NULL,
+        online TEXT NULL,
+        ddns_host TEXT NULL,
+        group_Name TEXT NULL,
+        group_id TEXT NULL,
+        qr_raw BLOB NULL,
+        qr_header BLOB NULL,
+        qr_footer BLOB NULL,
+        qr_encoded_devices BLOB NULL,
+        qr_decoded_devices BLOB NULL
+        
     )
     """
     )
@@ -96,16 +121,44 @@ def store_device_in_db(
     conn.commit()
 
 
+def store_dahua_device_in_db(
+    conn: sqlite3.Connection, dahua_qr_data: dahuaQrCodeData, qr_file: str
+) -> None:
+    """Store device information from QR code into database."""
+    cursor = conn.cursor()
+
+    for device in dahua_qr_data.dahua_local_devices:
+        cursor.execute(
+            """
+        INSERT INTO devices 
+        (name, ip_address, port, username, password, qr_file, qr_password, footer)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+            (
+                device.name,
+                device.ip_address,
+                device.port,
+                device.username,
+                device.password,
+                qr_file,
+                dahua_qr_data.e2e_password,
+                dahua_qr_data.footer,
+            ),
+        )
+
+    conn.commit()
+
+
 def sanitize_filename(filename: str) -> str:
     """Clean filename to prevent Windows path errors."""
     # Remove or replace problematic characters
-    filename = re.sub(r'[\/:*?"<>|]', '_', filename)
+    filename = re.sub(r'[\/:*?"<>|]', "_", filename)
     # Replace multiple spaces with single space
-    filename = ' '.join(filename.split())
+    filename = " ".join(filename.split())
     # Ensure filename isn't too long
     if len(filename) > 200:
         name, ext = os.path.splitext(filename)
-        filename = name[:195] + '...' + ext
+        filename = name[:195] + "..." + ext
     return filename
 
 
@@ -117,35 +170,71 @@ def process_qr_file(
         # Convert paths to Path objects for safer handling
         file_path = Path(file_path)
         output_dir = Path(output_dir)
-        
         # Ensure output directory exists
         output_dir.mkdir(parents=True, exist_ok=True)
-
         if not quiet:
             logger.info(f"Processing: {file_path}")
-
         # Get the QR code data from image
         qr_string = read_qr_from_image(str(file_path))
         if not qr_string:
             logger.error(f"No QR code found in {file_path}")
             return False
-
-        # Decode QR data
-        qr_data = QrCodeData.from_qr_string(qr_string)
+        qr_ident = qr_string[:4]
+        logger.info(f"QR Ident {qr_ident}")
+        global qr_data
+        global dahua_qr_data
+        if qr_ident == "QRC0":
+            # Decode QR data for hik
+            qr_data = QrCodeData.from_qr_string(qr_string)
+            store_device_in_db(db_conn, qr_data, file_path.name)
+            logger.info(f"QR data {qr_data}")
+            logger.info(f"QR string {qr_string}")
+            logger.info(f"QR data {qr_data}")
+            safe_password = sanitize_filename(qr_data.e2e_password)
+        elif qr_ident == "iVMS":
+            # Decode QR data for hik iVMS headers
+            logger.info(f"QR string {qr_string}")
+            qr_data = QrCodeData.from_qr_string(qr_string)
+            store_device_in_db(db_conn, qr_data, file_path.name)
+            logger.info(f"QR data {qr_data}")
+            safe_password = sanitize_filename(qr_data.e2e_password)
+        # Decode QR data for dahua
+        elif qr_ident == "DMSS":
+            logger.info(f"QR string {qr_string}")
+            dahua_qr_data = dahuaQrCodeData.dahua_from_qr_string(qr_string)
+            store_dahua_device_in_db(db_conn, dahua_qr_data, file_path.name)
+            logger.info(f"QR data {dahua_qr_data}")
+            safe_password = sanitize_filename(dahua_qr_data.e2e_password)
+        elif qr_ident == "H4sI":
+            logger.info(f"QR string {qr_string}")
+            dahua_qr_data = dahuaQrCodeData.dahua_from_qr_string(qr_string)
+            store_dahua_device_in_db(db_conn, dahua_qr_data, file_path.name)
+            logger.info(f"QR data {dahua_qr_data}")
+            safe_password = sanitize_filename(dahua_qr_data.e2e_password)
+        elif qr_ident == "http":
+            return False
+        else:
+            logger.info(f"QR string {qr_string}")
+            dahua_qr_data = dahuaQrCodeData.dahua_from_qr_string(qr_string)
+            store_dahua_device_in_db(db_conn, dahua_qr_data, file_path.name)
+            logger.info(f"QR data {dahua_qr_data}")
+            safe_password = sanitize_filename(dahua_qr_data.e2e_password)
 
         # Store device info in database
-        store_device_in_db(db_conn, qr_data, file_path.name)
+        # store_device_in_db(db_conn, qr_data, file_path.name)
+        # store_dahua_device_in_db(db_conn, dahua_qr_data, file_path.name)
 
         # Create new filename with password
         safe_stem = sanitize_filename(file_path.stem)
-        safe_password = sanitize_filename(qr_data.e2e_password)
         new_file_name = f"{safe_stem}_pw_{safe_password}{file_path.suffix}"
         new_path = output_dir / new_file_name
 
         # Ensure unique filename
         counter = 1
         while new_path.exists():
-            new_file_name = f"{safe_stem}_pw_{safe_password}_{counter}{file_path.suffix}"
+            new_file_name = (
+                f"{safe_stem}_pw_{safe_password}_{counter}{file_path.suffix}"
+            )
             new_path = output_dir / new_file_name
             counter += 1
 
@@ -157,7 +246,7 @@ def process_qr_file(
             logger.error(f"Failed to copy {file_path} -> {new_path}: {e}")
             # Fallback to basic file copy
             try:
-                with open(file_path, 'rb') as src, open(new_path, 'wb') as dst:
+                with open(file_path, "rb") as src, open(new_path, "wb") as dst:
                     dst.write(src.read())
                 logger.info("Successfully copied using fallback method")
             except Exception as e:
@@ -181,10 +270,10 @@ def process_directory_qr_files(
 ) -> dict:
     """Process all QR code image files in a directory."""
     logger.info(f"Starting directory processing: {directory}")
-    
+
     # Setup database first
     db_conn = setup_database(db_path)
-    
+
     try:
         # Backup database if exists
         if Path(db_path).exists():
@@ -198,13 +287,15 @@ def process_directory_qr_files(
         # Get list of files
         files = list(Path(directory).glob("**/*"))
         image_files = [f for f in files if f.suffix.lower() in extensions]
-        
+
         # Process files with progress bar
-        with click.progressbar(image_files, label='Processing QR codes') as files:
+        with click.progressbar(image_files, label="Processing QR codes") as files:
             for file_path in files:
                 stats["total"] += 1
                 try:
-                    success = process_qr_file(str(file_path), output_dir, db_conn, quiet)
+                    success = process_qr_file(
+                        str(file_path), output_dir, db_conn, quiet
+                    )
                     if success:
                         stats["processed"] += 1
                         if delete_originals:
@@ -216,7 +307,7 @@ def process_directory_qr_files(
                     logger.exception(f"Error processing {file_path}: {e}")
 
         return stats
-        
+
     finally:
         # Ensure database connection is closed
         db_conn.close()

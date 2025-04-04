@@ -22,8 +22,16 @@ class HikAES(pyaes.AES):
         }  # 44 is not a standard key size, but it is used for padding by the looks found a few instances of ADT usernames 44 bytes long i tink the important thing here is the div/4 of the key size
         super().__init__(key)
 
+    def _fix_padding(self, s: str) -> str:
+        s = s.strip()
+        missing_padding = len(s) % 4
+        return s + "=" * (4 - missing_padding) if missing_padding else s
+
     def decrypt_b64_to_str(self, ciphertext: str) -> str:
-        return "".join(chr(c) for c in self.decrypt(base64.b64decode(ciphertext)))
+        ciphertext_fixed = self._fix_padding(ciphertext)
+        decrypted = self.decrypt(base64.b64decode(ciphertext_fixed))
+        return "".join(chr(c) for c in decrypted)
 
     def encrypt_str_to_b64(self, plaintext: str) -> str:
-        return base64.b64encode(bytearray(self.encrypt(plaintext.encode()))).decode()
+        encrypted = self.encrypt(plaintext.encode())
+        return base64.b64encode(bytearray(encrypted)).decode()

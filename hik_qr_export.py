@@ -41,14 +41,18 @@ def decode(qr_string):
 def renew(qr_string, quiet, timestamp):
     qr_code_data = QrCodeData.from_qr_string(qr_string)
     if not quiet:
-        click.echo(f"QR code generated at: {qr_code_data.footer} ")
+        click.echo(
+            f"QR code generated at: {datetime.datetime.fromtimestamp(qr_code_data.footer).isoformat()} "
+        )
         #  f'({datetime.datetime.fromtimestamp(qr_code_data.footer).isoformat()})')
     if timestamp is None:
         qr_code_data.renew()
     else:
         qr_code_data.footer = timestamp
     if not quiet:
-        click.echo(f"New timestamp of QR creation is: {qr_code_data.footer} ")
+        click.echo(
+            f"New timestamp of QR creation is: {datetime.datetime.fromtimestamp(qr_code_data.footer).isoformat()} "
+        )
         #  f'({datetime.datetime.fromtimestamp(qr_code_data.footer).isoformat()})')
     click.echo(qr_code_data.encode("utf-8"))
 

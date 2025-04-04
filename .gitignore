@@ -183,4 +183,6 @@ cython_debug/
 *.json
 *.bak
 
-
+#scriptoutput
+out/
+processed/

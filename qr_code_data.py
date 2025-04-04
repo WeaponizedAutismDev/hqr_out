@@ -30,12 +30,17 @@ class QrCodeData:
 
     @classmethod
     def from_qr_string(cls, qr_string: str) -> "QrCodeData":
-        header = qr_string[:11]
-        compressed_data_b64 = qr_string[11:]
 
-        # print(decompressed_data)
-        # print(decompressed_data.split(':'))
-
+        test_header = qr_string[:4]
+        if test_header == "iVMS":
+            header = qr_string[:12]
+            compressed_data_b64 = qr_string[12:].strip()
+        else:
+            header = qr_string[:11]
+            compressed_data_b64 = qr_string[11:].strip()
+        missing_padding = len(compressed_data_b64) % 4
+        if missing_padding:
+            compressed_data_b64 += "=" * (4 - missing_padding)
         decompressed_data = zlib.decompress(
             base64.b64decode(compressed_data_b64)
         ).decode("utf-8")
@@ -85,9 +90,11 @@ class QrCodeData:
             header=header,
             footer=footer,
         )
+
     def handle_variations(decompressed_data: str) -> str:
         # Standardize delimeters
         return decompressed_data.replace(";", "$").replace(",", "&")
+
     def renew(self):
         self._footer = str(datetime.datetime.now().timestamp())
 

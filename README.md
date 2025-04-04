@@ -19,6 +19,9 @@ python hik_qr_export.py decode <qr_data>
 # Process a directory of QR images
 python hik_qr_export.py process-directory /path/to/images --output-dir ./processed --database devices.db
 
+#dump db to csv after processing
+python db_query_utility.py export-csv /pathto/databasefile.db /pathto/outputfilename.csv
+
 ```
 
 ## Installation
@@ -294,6 +297,12 @@ python db_query.py search devices.db "192.168.1"
 python db_query.py export-csv devices.db output.csv --filter "port=8000"
 ```
 
+## Educational Objective
+
+The contents of this repository are for eductaional and legitimate security research purposes only. 
+Please ensure that you posess authoriszation for any QR codes you process or systems you access.
+The authors are not responsible for missuse of this tool or source code.
+
 ## Contributing
 
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
@@ -302,6 +311,7 @@ Pull requests are welcome. For major changes, please open an issue first to disc
 ## Credits
 
 Couldnt have done it without the work of https://github.com/maxim-smirnov extracting the secret sauce. Thanks Mate, saved me some hours reversing!
+
 
 ## License
 
